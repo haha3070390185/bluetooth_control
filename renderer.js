@@ -8,12 +8,39 @@ class BluetoothManager {
     this.searchQuery = '';
     this.isScanning = false;
     this.renameDeviceId = null;
+    this.currentDetailsDeviceId = null;
+    this.settings = {};
     this.init();
   }
 
-  init() {
+  async init() {
+    await this.loadSettings();
     this.setupEventListeners();
     this.loadDevices();
+  }
+
+  async loadSettings() {
+    try {
+      const result = await electronAPI.getSettings();
+      if (result.success) {
+        this.settings = result.settings;
+        this.applySettingsUI();
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+  }
+
+  applySettingsUI() {
+    if (this.settings.autoScanOnLaunch !== undefined) {
+      document.getElementById('setting-auto-scan').checked = this.settings.autoScanOnLaunch;
+    }
+    if (this.settings.notifications !== undefined) {
+      document.getElementById('setting-notifications').checked = this.settings.notifications;
+    }
+    if (this.settings.rememberPairedDevices !== undefined) {
+      document.getElementById('setting-remember-paired').checked = this.settings.rememberPairedDevices;
+    }
   }
 
   setupEventListeners() {
@@ -27,6 +54,10 @@ class BluetoothManager {
 
     document.getElementById('close-btn').addEventListener('click', () => {
       electronAPI.closeWindow();
+    });
+
+    document.getElementById('settings-btn').addEventListener('click', () => {
+      this.openSettingsModal();
     });
 
     document.getElementById('scan-btn').addEventListener('click', () => {
@@ -52,7 +83,7 @@ class BluetoothManager {
       this.confirmRename();
     });
 
-    document.querySelector('.modal-overlay').addEventListener('click', () => {
+    document.querySelector('#rename-modal .modal-overlay').addEventListener('click', () => {
       this.closeRenameModal();
     });
 
@@ -61,13 +92,56 @@ class BluetoothManager {
         this.confirmRename();
       }
     });
+
+    document.getElementById('close-details-btn').addEventListener('click', () => {
+      this.closeDetailsModal();
+    });
+
+    document.querySelector('#details-modal .modal-overlay').addEventListener('click', () => {
+      this.closeDetailsModal();
+    });
+
+    document.getElementById('details-connect-btn').addEventListener('click', async () => {
+      await this.connectDeviceFromDetails();
+    });
+
+    document.getElementById('details-disconnect-btn').addEventListener('click', async () => {
+      await this.disconnectDeviceFromDetails();
+    });
+
+    document.getElementById('details-pair-btn').addEventListener('click', async () => {
+      await this.pairDeviceFromDetails();
+    });
+
+    document.getElementById('details-unpair-btn').addEventListener('click', async () => {
+      await this.unpairDeviceFromDetails();
+    });
+
+    document.getElementById('details-rename-btn').addEventListener('click', () => {
+      this.openRenameModalFromDetails();
+    });
+
+    document.getElementById('close-settings-btn').addEventListener('click', () => {
+      this.closeSettingsModal();
+    });
+
+    document.querySelector('#settings-modal .modal-overlay').addEventListener('click', () => {
+      this.closeSettingsModal();
+    });
+
+    document.getElementById('save-settings-btn').addEventListener('click', async () => {
+      await this.saveSettings();
+    });
   }
 
   async loadDevices() {
     try {
-      this.devices = await electronAPI.getBluetoothDevices();
-      this.renderDevices();
-      this.updateStatusCounts();
+      const result = await electronAPI.getBluetoothDevices();
+      if (result.success) {
+        this.devices = result.devices;
+        this.renderDevices();
+        this.updateStatusCounts();
+      }
     } catch (error) {
       console.error('Failed to load devices:', error);
     }
@@ -85,9 +159,12 @@ class BluetoothManager {
     scanBtn.disabled = true;
 
     try {
-      this.devices = await electronAPI.getBluetoothDevices();
-      this.renderDevices();
-      this.updateStatusCounts();
+      const result = await electronAPI.startScan();
+      if (result.success) {
+        this.devices = result.devices;
+        this.renderDevices();
+        this.updateStatusCounts();
+      }
     } catch (error) {
       console.error('Failed to scan devices:', error);
     } finally {
@@ -193,6 +270,18 @@ class BluetoothManager {
     return icons[type] || icons.unknown;
   }
 
+  getDeviceTypeLabel(type) {
+    const labels = {
+      headphones: '耳机',
+      wearable: '可穿戴设备',
+      speaker: '音箱',
+      keyboard: '键盘',
+      mouse: '鼠标',
+      unknown: '未知'
+    };
+    return labels[type] || labels.unknown;
+  }
+
   getDeviceStatus(device) {
     if (device.isConnected) {
       return { text: '已连接', class: 'connected' };
@@ -228,6 +317,8 @@ class BluetoothManager {
       emptyState.querySelector('p').textContent = this.devices.length === 0 
         ? '点击上方按钮扫描附近的蓝牙设备' 
         : '没有找到匹配的设备';
+      devicesList.innerHTML = '';
+      devicesList.appendChild(emptyState);
       return;
     }
     
@@ -237,13 +328,6 @@ class BluetoothManager {
     this.filteredDevices.forEach(device => {
       const status = this.getDeviceStatus(device);
       const displayName = device.customName || device.name;
-      const actionBtn = device.isConnected 
-        ? `<button class="action-btn neu-btn disconnect" data-id="${device.id}" data-action="disconnect" title="断开连接">
-             ${this.getDisconnectIcon()}
-           </button>`
-        : `<button class="action-btn neu-btn connect" data-id="${device.id}" data-action="connect" title="连接设备">
-             ${this.getConnectIcon()}
-           </button>`;
       
       html += `
         <div class="device-card neu-card" data-id="${device.id}">
@@ -267,7 +351,14 @@ class BluetoothManager {
             <button class="action-btn neu-btn rename" data-id="${device.id}" data-action="rename" title="重命名">
               ${this.getRenameIcon()}
             </button>
-            ${actionBtn}
+            ${device.isConnected 
+              ? `<button class="action-btn neu-btn disconnect" data-id="${device.id}" data-action="disconnect" title="断开连接">
+                   ${this.getDisconnectIcon()}
+                 </button>`
+              : `<button class="action-btn neu-btn connect" data-id="${device.id}" data-action="connect" title="连接设备">
+                   ${this.getConnectIcon()}
+                 </button>`
+            }
           </div>
         </div>
       `;
@@ -306,8 +397,18 @@ class BluetoothManager {
   }
 
   bindDeviceActions() {
+    document.querySelectorAll('.device-card').forEach(card => {
+      card.addEventListener('click', (e) => {
+        if (e.target.closest('.action-btn')) return;
+        
+        const deviceId = card.dataset.id;
+        this.openDetailsModal(deviceId);
+      });
+    });
+
     document.querySelectorAll('.action-btn').forEach(btn => {
       btn.addEventListener('click', async (e) => {
+        e.stopPropagation();
         const action = btn.dataset.action;
         const deviceId = btn.dataset.id;
         
@@ -337,6 +438,10 @@ class BluetoothManager {
         }
         this.renderDevices();
         this.updateStatusCounts();
+        
+        if (this.currentDetailsDeviceId === deviceId) {
+          await this.loadDeviceDetails(deviceId);
+        }
       }
     } catch (error) {
       console.error('Failed to connect:', error);
@@ -362,6 +467,10 @@ class BluetoothManager {
         }
         this.renderDevices();
         this.updateStatusCounts();
+        
+        if (this.currentDetailsDeviceId === deviceId) {
+          await this.loadDeviceDetails(deviceId);
+        }
       }
     } catch (error) {
       console.error('Failed to disconnect:', error);
@@ -389,6 +498,13 @@ class BluetoothManager {
     }
   }
 
+  openRenameModalFromDetails() {
+    if (this.currentDetailsDeviceId) {
+      this.closeDetailsModal();
+      this.openRenameModal(this.currentDetailsDeviceId);
+    }
+  }
+
   closeRenameModal() {
     const modal = document.getElementById('rename-modal');
     modal.classList.remove('active');
@@ -409,6 +525,10 @@ class BluetoothManager {
           device.customName = newName;
         }
         this.renderDevices();
+        
+        if (this.currentDetailsDeviceId === this.renameDeviceId) {
+          await this.loadDeviceDetails(this.renameDeviceId);
+        }
       }
     } catch (error) {
       console.error('Failed to rename:', error);
@@ -417,12 +537,245 @@ class BluetoothManager {
     }
   }
 
+  async openDetailsModal(deviceId) {
+    this.currentDetailsDeviceId = deviceId;
+    await this.loadDeviceDetails(deviceId);
+    
+    const modal = document.getElementById('details-modal');
+    modal.classList.add('active');
+  }
+
+  async loadDeviceDetails(deviceId) {
+    try {
+      const result = await electronAPI.getDeviceDetails(deviceId);
+      if (result.success) {
+        const details = result.details;
+        this.updateDetailsUI(details);
+      }
+    } catch (error) {
+      console.error('Failed to get device details:', error);
+    }
+  }
+
+  updateDetailsUI(details) {
+    const displayName = details.customName || details.name;
+    
+    document.getElementById('details-icon').innerHTML = this.getDeviceIcon(details.type);
+    document.getElementById('details-name').textContent = displayName;
+    
+    const status = this.getDeviceStatus(details);
+    document.getElementById('details-status').textContent = status.text;
+    document.getElementById('details-status').className = `details-status ${status.class}`;
+    
+    document.getElementById('detail-name').textContent = details.name;
+    document.getElementById('detail-custom-name').textContent = details.customName || '未设置';
+    document.getElementById('detail-address').textContent = details.address;
+    document.getElementById('detail-type').textContent = this.getDeviceTypeLabel(details.type);
+    document.getElementById('detail-manufacturer').textContent = details.manufacturer || '未知';
+    document.getElementById('detail-model').textContent = details.model || '未知';
+    
+    document.getElementById('detail-connected').textContent = details.isConnected ? '已连接' : '未连接';
+    document.getElementById('detail-paired').textContent = details.isPaired ? '已配对' : '未配对';
+    document.getElementById('detail-signal').textContent = `${details.rssi} dBm (${details.signalQuality.label})`;
+    document.getElementById('detail-last-seen').textContent = details.lastSeenFormatted;
+    
+    const batterySection = document.getElementById('battery-section');
+    if (details.batteryLevel !== null && details.batteryLevel !== undefined) {
+      batterySection.style.display = 'block';
+      document.getElementById('battery-text').textContent = `${details.batteryLevel}%`;
+      
+      const batteryFill = document.getElementById('battery-fill');
+      batteryFill.style.width = `${details.batteryLevel}%`;
+      
+      batteryFill.classList.remove('high', 'medium', 'low');
+      if (details.batteryLevel >= 60) {
+        batteryFill.classList.add('high');
+      } else if (details.batteryLevel >= 30) {
+        batteryFill.classList.add('medium');
+      } else {
+        batteryFill.classList.add('low');
+      }
+    } else {
+      batterySection.style.display = 'none';
+    }
+    
+    const servicesList = document.getElementById('services-list');
+    if (details.services && details.services.length > 0) {
+      document.getElementById('services-section').style.display = 'block';
+      servicesList.innerHTML = details.services
+        .map(service => `<span class="service-tag">${service}</span>`)
+        .join('');
+    } else {
+      document.getElementById('services-section').style.display = 'none';
+    }
+    
+    const connectBtn = document.getElementById('details-connect-btn');
+    const disconnectBtn = document.getElementById('details-disconnect-btn');
+    const pairBtn = document.getElementById('details-pair-btn');
+    const unpairBtn = document.getElementById('details-unpair-btn');
+    
+    if (details.isConnected) {
+      connectBtn.style.display = 'none';
+      disconnectBtn.style.display = 'block';
+    } else {
+      connectBtn.style.display = 'block';
+      disconnectBtn.style.display = 'none';
+    }
+    
+    if (details.isPaired) {
+      pairBtn.style.display = 'none';
+      unpairBtn.style.display = 'block';
+    } else {
+      pairBtn.style.display = 'block';
+      unpairBtn.style.display = 'none';
+    }
+  }
+
+  closeDetailsModal() {
+    const modal = document.getElementById('details-modal');
+    modal.classList.remove('active');
+  }
+
+  async connectDeviceFromDetails() {
+    if (!this.currentDetailsDeviceId) return;
+    
+    const connectBtn = document.getElementById('details-connect-btn');
+    connectBtn.disabled = true;
+    connectBtn.textContent = '连接中...';
+    
+    try {
+      const result = await electronAPI.connectBluetooth(this.currentDetailsDeviceId);
+      if (result.success) {
+        const device = this.devices.find(d => d.id === this.currentDetailsDeviceId);
+        if (device) {
+          device.isConnected = true;
+        }
+        this.renderDevices();
+        this.updateStatusCounts();
+        await this.loadDeviceDetails(this.currentDetailsDeviceId);
+      }
+    } catch (error) {
+      console.error('Failed to connect:', error);
+    } finally {
+      connectBtn.disabled = false;
+      connectBtn.textContent = '连接';
+    }
+  }
+
+  async disconnectDeviceFromDetails() {
+    if (!this.currentDetailsDeviceId) return;
+    
+    const disconnectBtn = document.getElementById('details-disconnect-btn');
+    disconnectBtn.disabled = true;
+    disconnectBtn.textContent = '断开中...';
+    
+    try {
+      const result = await electronAPI.disconnectBluetooth(this.currentDetailsDeviceId);
+      if (result.success) {
+        const device = this.devices.find(d => d.id === this.currentDetailsDeviceId);
+        if (device) {
+          device.isConnected = false;
+        }
+        this.renderDevices();
+        this.updateStatusCounts();
+        await this.loadDeviceDetails(this.currentDetailsDeviceId);
+      }
+    } catch (error) {
+      console.error('Failed to disconnect:', error);
+    } finally {
+      disconnectBtn.disabled = false;
+      disconnectBtn.textContent = '断开连接';
+    }
+  }
+
+  async pairDeviceFromDetails() {
+    if (!this.currentDetailsDeviceId) return;
+    
+    const pairBtn = document.getElementById('details-pair-btn');
+    pairBtn.disabled = true;
+    pairBtn.textContent = '配对中...';
+    
+    try {
+      const result = await electronAPI.pairDevice(this.currentDetailsDeviceId);
+      if (result.success) {
+        const device = this.devices.find(d => d.id === this.currentDetailsDeviceId);
+        if (device) {
+          device.isPaired = true;
+        }
+        this.renderDevices();
+        this.updateStatusCounts();
+        await this.loadDeviceDetails(this.currentDetailsDeviceId);
+      }
+    } catch (error) {
+      console.error('Failed to pair:', error);
+    } finally {
+      pairBtn.disabled = false;
+      pairBtn.textContent = '配对';
+    }
+  }
+
+  async unpairDeviceFromDetails() {
+    if (!this.currentDetailsDeviceId) return;
+    
+    const unpairBtn = document.getElementById('details-unpair-btn');
+    unpairBtn.disabled = true;
+    unpairBtn.textContent = '取消配对中...';
+    
+    try {
+      const result = await electronAPI.unpairDevice(this.currentDetailsDeviceId);
+      if (result.success) {
+        const device = this.devices.find(d => d.id === this.currentDetailsDeviceId);
+        if (device) {
+          device.isPaired = false;
+        }
+        this.renderDevices();
+        this.updateStatusCounts();
+        await this.loadDeviceDetails(this.currentDetailsDeviceId);
+      }
+    } catch (error) {
+      console.error('Failed to unpair:', error);
+    } finally {
+      unpairBtn.disabled = false;
+      unpairBtn.textContent = '取消配对';
+    }
+  }
+
+  openSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    modal.classList.add('active');
+  }
+
+  closeSettingsModal() {
+    const modal = document.getElementById('settings-modal');
+    modal.classList.remove('active');
+  }
+
+  async saveSettings() {
+    const newSettings = {
+      autoScanOnLaunch: document.getElementById('setting-auto-scan').checked,
+      notifications: document.getElementById('setting-notifications').checked,
+      rememberPairedDevices: document.getElementById('setting-remember-paired').checked
+    };
+    
+    try {
+      const result = await electronAPI.updateSettings(newSettings);
+      if (result.success) {
+        this.settings = result.settings;
+        this.closeSettingsModal();
+      }
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    }
+  }
+
   updateStatusCounts() {
     const connectedCount = this.devices.filter(d => d.isConnected).length;
     const availableCount = this.devices.filter(d => !d.isConnected).length;
+    const pairedCount = this.devices.filter(d => d.isPaired).length;
     
     document.getElementById('connected-count').textContent = connectedCount;
     document.getElementById('available-count').textContent = availableCount;
+    document.getElementById('paired-count').textContent = pairedCount;
   }
 }
 
