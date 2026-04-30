@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>蓝牙设备管理器</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <div class="title-bar">
+      <div class="title-text">
+        <div class="title-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#667eea" stroke-width="2">
+            <path d="M6.5 6.5L17.5 17.5"></path>
+            <path d="M17.5 6.5L6.5 17.5"></path>
+            <path d="M7 7L17 17"></path>
+            <path d="M17 7L7 17"></path>
+          </svg>
+        </div>
+        <span>蓝牙设备管理器</span>
+      </div>
+      <div class="window-controls">
+        <button class="control-btn settings" id="settings-btn" title="设置">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+        <button class="control-btn minimize" id="minimize-btn" title="最小化">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M5 12h14"></path>
+          </svg>
+        </button>
+        <button class="control-btn maximize" id="maximize-btn" title="最大化">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="4" y="4" width="16" height="16" rx="2"></rect>
+          </svg>
+        </button>
+        <button class="control-btn close" id="close-btn" title="关闭">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 6L6 18"></path>
+            <path d="M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div class="status-section">
+        <div class="status-card neu-card">
+          <div class="status-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M6.5 6.5L17.5 17.5"></path>
+              <path d="M17.5 6.5L6.5 17.5"></path>
+              <path d="M7 7L17 17"></path>
+              <path d="M17 7L7 17"></path>
+            </svg>
+          </div>
+          <div class="status-info">
+            <h3>蓝牙状态</h3>
+            <span class="status-text enabled" id="bluetooth-status">已开启</span>
+          </div>
+        </div>
+        
+        <div class="status-card neu-card">
+          <div class="status-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+            </svg>
+          </div>
+          <div class="status-info">
+            <h3>已连接设备</h3>
+            <span class="status-text" id="connected-count">0</span>
+          </div>
+        </div>
+        
+        <div class="status-card neu-card">
+          <div class="status-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="M21 21l-4.35-4.35"></path>
+            </svg>
+          </div>
+          <div class="status-info">
+            <h3>可用设备</h3>
+            <span class="status-text" id="available-count">0</span>
+          </div>
+        </div>
+        
+        <div class="status-card neu-card">
+          <div class="status-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+          </div>
+          <div class="status-info">
+            <h3>已配对设备</h3>
+            <span class="status-text" id="paired-count">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="control-section">
+        <button class="scan-btn neu-btn neu-btn-primary" id="scan-btn">
+          <div class="btn-icon" id="scan-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+            </svg>
+          </div>
+          <span id="scan-text">扫描设备</span>
+        </button>
+        
+        <div class="filter-tabs">
+          <button class="tab-btn neu-btn neu-btn-active" data-filter="all">全部</button>
+          <button class="tab-btn neu-btn" data-filter="connected">已连接</button>
+          <button class="tab-btn neu-btn" data-filter="available">可用</button>
+          <button class="tab-btn neu-btn" data-filter="paired">已配对</button>
+        </div>
+      </div>
+
+      <div class="devices-section">
+        <div class="devices-header">
+          <h2>设备列表</h2>
+          <div class="devices-filter">
+            <input type="text" class="search-input neu-input" id="search-input" placeholder="搜索设备名称或地址...">
+          </div>
+        </div>
+        
+        <div class="devices-list" id="devices-list">
+          <div class="empty-state neu-card" id="empty-state">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"></circle>
+                <path d="M8 15s1.5 2 4 2 4-2 4-2"></path>
+                <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                <line x1="15" y1="9" x2="15.01" y2="9"></line>
+              </svg>
+            </div>
+            <p>点击上方按钮扫描附近的蓝牙设备</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="rename-modal">
+      <div class="modal-overlay"></div>
+      <div class="modal-content neu-card">
+        <h3>重命名设备</h3>
+        <p class="modal-hint">当前设备: <span id="rename-device-name">-</span></p>
+        <input type="text" class="neu-input" id="rename-input" placeholder="输入新名称">
+        <div class="modal-actions">
+          <button class="modal-btn neu-btn" id="cancel-rename-btn">取消</button>
+          <button class="modal-btn neu-btn neu-btn-primary" id="confirm-rename-btn">确认</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="details-modal">
+      <div class="modal-overlay"></div>
+      <div class="modal-content neu-card details-modal">
+        <div class="details-header">
+          <div class="details-icon" id="details-icon">
+          </div>
+          <div class="details-title">
+            <h3 id="details-name">-</h3>
+            <span class="details-status" id="details-status">-</span>
+          </div>
+          <button class="modal-close" id="close-details-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18"></path>
+              <path d="M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="details-content">
+          <div class="details-section">
+            <h4>设备信息</h4>
+            <div class="details-grid">
+              <div class="detail-item">
+                <span class="detail-label">设备名称</span>
+                <span class="detail-value" id="detail-name">-</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">自定义名称</span>
+                <span class="detail-value" id="detail-custom-name">-</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">MAC 地址</span>
+                <span class="detail-value mono" id="detail-address">-</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">设备类型</span>
+                <span class="detail-value" id="detail-type">-</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">制造商</span>
+                <span class="detail-value" id="detail-manufacturer">-</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">型号</span>
+                <span class="detail-value" id="detail-model">-</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="details-section">
+            <h4>连接状态</h4>
+            <div class="details-grid">
+              <div class="detail-item">
+                <span class="detail-label">连接状态</span>
+                <span class="detail-value" id="detail-connected">-</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">配对状态</span>
+                <span class="detail-value" id="detail-paired">-</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">信号强度</span>
+                <span class="detail-value" id="detail-signal">-</span>
+              </div>
+              <div class="detail-item">
+                <span class="detail-label">最后出现</span>
+                <span class="detail-value" id="detail-last-seen">-</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="details-section" id="battery-section">
+            <h4>电量信息</h4>
+            <div class="details-grid">
+              <div class="detail-item full-width">
+                <span class="detail-label">电池电量</span>
+                <div class="battery-display">
+                  <div class="battery-bar">
+                    <div class="battery-fill" id="battery-fill"></div>
+                  </div>
+                  <span class="battery-text" id="battery-text">-</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="details-section" id="services-section">
+            <h4>支持的服务</h4>
+            <div class="services-list" id="services-list">
+            </div>
+          </div>
+        </div>
+        
+        <div class="details-actions">
+          <button class="modal-btn neu-btn" id="details-pair-btn" style="display: none;">配对</button>
+          <button class="modal-btn neu-btn" id="details-unpair-btn" style="display: none;">取消配对</button>
+          <button class="modal-btn neu-btn" id="details-connect-btn" style="display: none;">连接</button>
+          <button class="modal-btn neu-btn neu-btn-danger" id="details-disconnect-btn" style="display: none;">断开连接</button>
+          <button class="modal-btn neu-btn neu-btn-primary" id="details-rename-btn">重命名</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal" id="settings-modal">
+      <div class="modal-overlay"></div>
+      <div class="modal-content neu-card settings-modal">
+        <div class="settings-header">
+          <h3>应用设置</h3>
+          <button class="modal-close" id="close-settings-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 6L6 18"></path>
+              <path d="M6 6l12 12"></path>
+            </svg>
+          </button>
+        </div>
+        
+        <div class="settings-content">
+          <div class="settings-section">
+            <h4>常规设置</h4>
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">启动时自动扫描</span>
+                <span class="setting-desc">应用启动后自动扫描附近的蓝牙设备</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-auto-scan">
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">显示系统通知</span>
+                <span class="setting-desc">设备连接/断开时显示系统通知</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-notifications" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+            
+            <div class="setting-item">
+              <div class="setting-info">
+                <span class="setting-label">记住已配对设备</span>
+                <span class="setting-desc">保存已配对设备的信息</span>
+              </div>
+              <label class="toggle-switch">
+                <input type="checkbox" id="setting-remember-paired" checked>
+                <span class="toggle-slider"></span>
+              </label>
+            </div>
+          </div>
+          
+          <div class="settings-section">
+            <h4>关于</h4>
+            <div class="about-info">
+              <p><strong>蓝牙设备管理器</strong></p>
+              <p>版本: 1.0.0</p>
+              <p>新拟物风格设计</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-actions">
+          <button class="modal-btn neu-btn neu-btn-primary" id="save-settings-btn">保存设置</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
